@@ -20,4 +20,13 @@ class User extends Authenticatable
         'password',
         'remember_token',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'email_verified_at' => 'datetime',
+            'password' => 'hashed',
+            'welcome_valid_until' => 'datetime',
+        ];
+    }
 }
