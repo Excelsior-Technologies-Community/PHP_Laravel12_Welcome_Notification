@@ -4,12 +4,32 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class AddWelcomeValidUntilFieldToUsersTable extends Migration
+return new class extends Migration
 {
-    public function up()
+    public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->timestamp('welcome_valid_until')->nullable();
+
+            if (!Schema::hasColumn('users', 'welcome_valid_until')) {
+
+                $table->timestamp('welcome_valid_until')
+                    ->nullable();
+
+            }
+
         });
     }
-}
+
+    public function down(): void
+    {
+        Schema::table('users', function (Blueprint $table) {
+
+            if (Schema::hasColumn('users', 'welcome_valid_until')) {
+
+                $table->dropColumn('welcome_valid_until');
+
+            }
+
+        });
+    }
+};
