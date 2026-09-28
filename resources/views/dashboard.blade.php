@@ -41,11 +41,6 @@
             border: none;
             border-radius: 15px;
             box-shadow: 0 8px 20px rgba(0,0,0,0.08);
-            transition: transform 0.2s;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-3px);
         }
 
         .stat-number {
@@ -94,18 +89,26 @@
                 </h2>
 
                 <p class="mb-0">
-                    Monitor welcome invitations and account activation status.
+                    Monitor invitations and account activation.
                 </p>
 
             </div>
 
-            <div>
+
+            <div class="d-flex gap-2">
 
                 <a
                     href="{{ route('welcome.users') }}"
                     class="btn btn-light"
                 >
                     Manage Users
+                </a>
+
+                <a
+                    href="{{ route('welcome.activity') }}"
+                    class="btn btn-light"
+                >
+                    Activity
                 </a>
 
             </div>
@@ -115,7 +118,84 @@
     </div>
 
 
-    <!-- Statistics -->
+    <!-- Date filter -->
+
+    <div class="card section-card mb-4">
+
+        <div class="card-body">
+
+            <form
+                method="GET"
+                action="{{ route('welcome.dashboard') }}"
+            >
+
+                <div class="row align-items-end g-3">
+
+                    <div class="col-md-4">
+
+                        <label class="form-label">
+                            Dashboard Range
+                        </label>
+
+                        <select
+                            name="range"
+                            class="form-select"
+                        >
+
+                            <option
+                                value="all"
+                                {{ $range === 'all' ? 'selected' : '' }}
+                            >
+                                All Time
+                            </option>
+
+                            <option
+                                value="today"
+                                {{ $range === 'today' ? 'selected' : '' }}
+                            >
+                                Today
+                            </option>
+
+                            <option
+                                value="7days"
+                                {{ $range === '7days' ? 'selected' : '' }}
+                            >
+                                Last 7 Days
+                            </option>
+
+                            <option
+                                value="30days"
+                                {{ $range === '30days' ? 'selected' : '' }}
+                            >
+                                Last 30 Days
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+                    <div class="col-md-2">
+
+                        <button
+                            class="btn btn-primary w-100"
+                            type="submit"
+                        >
+                            Apply
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+
+    <!-- User statistics -->
 
     <div class="row g-4 mb-4">
 
@@ -147,7 +227,7 @@
                 <div class="card-body">
 
                     <div class="stat-title">
-                        Activated Accounts
+                        Activated
                     </div>
 
                     <div class="stat-number text-success">
@@ -168,7 +248,7 @@
                 <div class="card-body">
 
                     <div class="stat-title">
-                        Pending Invitations
+                        Pending
                     </div>
 
                     <div class="stat-number text-warning">
@@ -189,7 +269,7 @@
                 <div class="card-body">
 
                     <div class="stat-title">
-                        Expired Invitations
+                        Expired
                     </div>
 
                     <div class="stat-number text-danger">
@@ -205,7 +285,97 @@
     </div>
 
 
-    <!-- Activation Progress -->
+    <!-- Invitation statistics -->
+
+    <div class="row g-4 mb-4">
+
+        <div class="col-md-3">
+
+            <div class="card stat-card">
+
+                <div class="card-body">
+
+                    <div class="stat-title">
+                        Invitations Sent
+                    </div>
+
+                    <div class="stat-number text-primary">
+                        {{ $totalInvitations }}
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="col-md-3">
+
+            <div class="card stat-card">
+
+                <div class="card-body">
+
+                    <div class="stat-title">
+                        Resent
+                    </div>
+
+                    <div class="stat-number text-warning">
+                        {{ $totalResends }}
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="col-md-3">
+
+            <div class="card stat-card">
+
+                <div class="card-body">
+
+                    <div class="stat-title">
+                        Revoked
+                    </div>
+
+                    <div class="stat-number text-danger">
+                        {{ $totalRevoked }}
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <div class="col-md-3">
+
+            <div class="card stat-card">
+
+                <div class="card-body">
+
+                    <div class="stat-title">
+                        Activated
+                    </div>
+
+                    <div class="stat-number text-success">
+                        {{ $totalActivated }}
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- Activation -->
 
     <div class="card section-card mb-4">
 
@@ -213,7 +383,7 @@
 
             <div class="d-flex justify-content-between mb-2">
 
-                <h5 class="mb-0">
+                <h5>
                     Account Activation Rate
                 </h5>
 
@@ -227,11 +397,7 @@
 
                 <div
                     class="progress-bar bg-success"
-                    role="progressbar"
                     style="width: {{ $activationPercentage }}%"
-                    aria-valuenow="{{ $activationPercentage }}"
-                    aria-valuemin="0"
-                    aria-valuemax="100"
                 ></div>
 
             </div>
@@ -241,15 +407,15 @@
     </div>
 
 
-    <!-- Recent Users -->
+    <!-- Recent users -->
 
-    <div class="card section-card">
+    <div class="card section-card mb-4">
 
         <div class="card-body p-4">
 
             <div class="d-flex justify-content-between align-items-center mb-3">
 
-                <h5 class="mb-0">
+                <h5>
                     Recent Users
                 </h5>
 
@@ -257,7 +423,7 @@
                     href="{{ route('welcome.users') }}"
                     class="btn btn-primary btn-sm"
                 >
-                    View All Users
+                    View Users
                 </a>
 
             </div>
@@ -272,6 +438,10 @@
                     <tr>
 
                         <th>
+                            ID
+                        </th>
+
+                        <th>
                             Name
                         </th>
 
@@ -281,10 +451,6 @@
 
                         <th>
                             Status
-                        </th>
-
-                        <th>
-                            Valid Until
                         </th>
 
                     </tr>
@@ -298,6 +464,10 @@
                         <tr>
 
                             <td>
+                                {{ $user->id }}
+                            </td>
+
+                            <td>
                                 {{ $user->name }}
                             </td>
 
@@ -307,13 +477,13 @@
 
                             <td>
 
-                                @if(is_null($user->welcome_valid_until))
+                                @if($user->activationStatus() === 'activated')
 
                                     <span class="badge bg-success">
                                         Activated
                                     </span>
 
-                                @elseif($user->welcome_valid_until->isFuture())
+                                @elseif($user->activationStatus() === 'pending')
 
                                     <span class="badge bg-warning text-dark">
                                         Pending
@@ -329,18 +499,138 @@
 
                             </td>
 
+                        </tr>
+
+                    @empty
+
+                        <tr>
+
+                            <td
+                                colspan="4"
+                                class="text-center text-muted"
+                            >
+                                No users found.
+                            </td>
+
+                        </tr>
+
+                    @endforelse
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- Recent activity -->
+
+    <div class="card section-card">
+
+        <div class="card-body p-4">
+
+            <div class="d-flex justify-content-between align-items-center mb-3">
+
+                <h5>
+                    Recent Invitation Activity
+                </h5>
+
+                <a
+                    href="{{ route('welcome.activity') }}"
+                    class="btn btn-outline-primary btn-sm"
+                >
+                    View All
+                </a>
+
+            </div>
+
+
+            <div class="table-responsive">
+
+                <table class="table table-hover">
+
+                    <thead>
+
+                    <tr>
+
+                        <th>
+                            User
+                        </th>
+
+                        <th>
+                            Action
+                        </th>
+
+                        <th>
+                            Details
+                        </th>
+
+                        <th>
+                            Time
+                        </th>
+
+                    </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                    @forelse($recentActivities as $activity)
+
+                        <tr>
+
                             <td>
 
-                                @if($user->welcome_valid_until)
+                                {{ $activity->user?->email ?? 'Deleted User' }}
 
-                                    {{ $user->welcome_valid_until->format('d M Y, h:i A') }}
+                            </td>
+
+                            <td>
+
+                                @if($activity->action === 'activated')
+
+                                    <span class="badge bg-success">
+                                        Activated
+                                    </span>
+
+                                @elseif($activity->action === 'resent')
+
+                                    <span class="badge bg-warning text-dark">
+                                        Resent
+                                    </span>
+
+                                @elseif($activity->action === 'revoked')
+
+                                    <span class="badge bg-danger">
+                                        Revoked
+                                    </span>
+
+                                @elseif($activity->action === 'reactivated')
+
+                                    <span class="badge bg-primary">
+                                        Reactivated
+                                    </span>
 
                                 @else
 
-                                    —
+                                    <span class="badge bg-secondary">
+                                        {{ ucfirst($activity->action) }}
+                                    </span>
 
                                 @endif
 
+                            </td>
+
+                            <td>
+                                {{ $activity->details }}
+                            </td>
+
+                            <td>
+                                {{ $activity->created_at->format('d M Y, h:i A') }}
                             </td>
 
                         </tr>
@@ -351,10 +641,9 @@
 
                             <td
                                 colspan="4"
-                                class="text-center text-muted py-4"
+                                class="text-center text-muted"
                             >
-                                No users found.
-
+                                No activity found.
                             </td>
 
                         </tr>
