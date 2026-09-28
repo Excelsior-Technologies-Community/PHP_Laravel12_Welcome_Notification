@@ -47,6 +47,10 @@
             vertical-align: middle;
         }
 
+        .action-buttons form {
+            display: inline-block;
+        }
+
     </style>
 
 </head>
@@ -68,17 +72,28 @@
                 </h2>
 
                 <p class="mb-0">
-                    Search, filter and manage welcome invitations.
+                    Search, filter, resend, revoke and manage invitations.
                 </p>
 
             </div>
 
-            <a
-                href="{{ route('welcome.dashboard') }}"
-                class="btn btn-light"
-            >
-                Dashboard
-            </a>
+            <div class="d-flex gap-2">
+
+                <a
+                    href="{{ route('welcome.dashboard') }}"
+                    class="btn btn-light"
+                >
+                    Dashboard
+                </a>
+
+                <a
+                    href="{{ route('welcome.activity') }}"
+                    class="btn btn-light"
+                >
+                    Activity
+                </a>
+
+            </div>
 
         </div>
 
@@ -90,9 +105,7 @@
     @if(session('success'))
 
         <div class="alert alert-success">
-
             {{ session('success') }}
-
         </div>
 
     @endif
@@ -101,15 +114,28 @@
     @if(session('error'))
 
         <div class="alert alert-danger">
-
             {{ session('error') }}
+        </div>
+
+    @endif
+
+
+    @if($errors->any())
+
+        <div class="alert alert-danger">
+
+            @foreach($errors->all() as $error)
+
+                <div>{{ $error }}</div>
+
+            @endforeach
 
         </div>
 
     @endif
 
 
-    <!-- Search and Filter -->
+    <!-- Search -->
 
     <div class="card main-card mb-4">
 
@@ -122,7 +148,7 @@
 
                 <div class="row g-3 align-items-end">
 
-                    <div class="col-md-6">
+                    <div class="col-md-4">
 
                         <label class="form-label">
                             Search User
@@ -132,17 +158,17 @@
                             type="text"
                             name="search"
                             class="form-control"
-                            placeholder="Search by name or email..."
+                            placeholder="Name or email..."
                             value="{{ $search }}"
                         >
 
                     </div>
 
 
-                    <div class="col-md-4">
+                    <div class="col-md-3">
 
                         <label class="form-label">
-                            Activation Status
+                            Status
                         </label>
 
                         <select
@@ -183,6 +209,57 @@
                     </div>
 
 
+                    <div class="col-md-3">
+
+                        <label class="form-label">
+                            Sort
+                        </label>
+
+                        <select
+                            name="sort"
+                            class="form-select"
+                        >
+
+                            <option
+                                value="latest"
+                                {{ $sort === 'latest' ? 'selected' : '' }}
+                            >
+                                Latest
+                            </option>
+
+                            <option
+                                value="id"
+                                {{ $sort === 'id' ? 'selected' : '' }}
+                            >
+                                ID
+                            </option>
+
+                            <option
+                                value="name"
+                                {{ $sort === 'name' ? 'selected' : '' }}
+                            >
+                                Name
+                            </option>
+
+                            <option
+                                value="email"
+                                {{ $sort === 'email' ? 'selected' : '' }}
+                            >
+                                Email
+                            </option>
+
+                            <option
+                                value="created_at"
+                                {{ $sort === 'created_at' ? 'selected' : '' }}
+                            >
+                                Created Date
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
                     <div class="col-md-2 d-grid">
 
                         <button
@@ -203,178 +280,392 @@
     </div>
 
 
-    <!-- Users -->
+    <!-- Bulk actions -->
 
-    <div class="card main-card">
+    <form
+        method="POST"
+        action="{{ route('welcome.bulk-resend') }}"
+        id="bulkForm"
+    >
 
-        <div class="card-body p-4">
+        @csrf
 
-            <div class="table-responsive">
+        <div class="card main-card mb-4">
 
-                <table class="table table-hover">
+            <div class="card-body">
 
-                    <thead>
+                <div class="row g-3 align-items-end">
 
-                    <tr>
+                    <div class="col-md-4">
 
-                        <th>
-                            #
-                        </th>
+                        <label class="form-label">
+                            Invitation Validity
+                        </label>
 
-                        <th>
-                            Name
-                        </th>
+                        <select
+                            name="hours"
+                            class="form-select"
+                        >
 
-                        <th>
-                            Email
-                        </th>
+                            <option value="6">
+                                6 Hours
+                            </option>
 
-                        <th>
-                            Status
-                        </th>
+                            <option value="12">
+                                12 Hours
+                            </option>
 
-                        <th>
-                            Valid Until
-                        </th>
+                            <option value="24" selected>
+                                24 Hours
+                            </option>
 
-                        <th>
-                            Action
-                        </th>
+                            <option value="48">
+                                48 Hours
+                            </option>
 
-                    </tr>
+                            <option value="72">
+                                72 Hours
+                            </option>
 
-                    </thead>
+                        </select>
 
+                    </div>
 
-                    <tbody>
+                    <div class="col-md-4">
 
-                    @forelse($users as $user)
+                        <button
+                            type="submit"
+                            class="btn btn-warning"
+                            onclick="return confirm('Resend invitations to selected users?')"
+                        >
+                            Bulk Resend Selected
+                        </button>
 
-                        <tr>
+                    </div>
 
-                            <td>
-                                {{ $user->id }}
-                            </td>
+                    <div class="col-md-4 text-md-end">
 
-                            <td>
-                                <strong>
-                                    {{ $user->name }}
-                                </strong>
-                            </td>
+                        <a
+                            href="{{ route('welcome.export', request()->query()) }}"
+                            class="btn btn-success"
+                        >
+                            Export CSV
+                        </a>
 
-                            <td>
-                                {{ $user->email }}
-                            </td>
+                    </div>
 
-                            <td>
-
-                                @if(is_null($user->welcome_valid_until))
-
-                                    <span class="badge bg-success">
-                                        Activated
-                                    </span>
-
-                                @elseif($user->welcome_valid_until->isFuture())
-
-                                    <span class="badge bg-warning text-dark">
-                                        Pending
-                                    </span>
-
-                                @else
-
-                                    <span class="badge bg-danger">
-                                        Expired
-                                    </span>
-
-                                @endif
-
-                            </td>
-
-
-                            <td>
-
-                                @if($user->welcome_valid_until)
-
-                                    {{ $user->welcome_valid_until->format('d M Y, h:i A') }}
-
-                                @else
-
-                                    —
-
-                                @endif
-
-                            </td>
-
-
-                            <td>
-
-                                @if($user->welcome_valid_until)
-
-                                    <form
-                                        method="POST"
-                                        action="{{ route('welcome.resend', $user) }}"
-                                        onsubmit="return confirm('Resend welcome invitation to {{ $user->email }}?');"
-                                    >
-
-                                        @csrf
-
-                                        <button
-                                            type="submit"
-                                            class="btn btn-sm btn-outline-primary"
-                                        >
-                                            Resend Welcome
-                                        </button>
-
-                                    </form>
-
-                                @else
-
-                                    <span class="text-success">
-                                        Account Active
-                                    </span>
-
-                                @endif
-
-                            </td>
-
-                        </tr>
-
-                    @empty
-
-                        <tr>
-
-                            <td
-                                colspan="6"
-                                class="text-center text-muted py-5"
-                            >
-                                No users found.
-
-                            </td>
-
-                        </tr>
-
-                    @endforelse
-
-                    </tbody>
-
-                </table>
-
-            </div>
-
-
-            <!-- Pagination -->
-
-            <div class="mt-4">
-
-                {{ $users->links('pagination::bootstrap-5') }}
+                </div>
 
             </div>
 
         </div>
 
-    </div>
+
+        <!-- Users -->
+
+        <div class="card main-card">
+
+            <div class="card-body p-4">
+
+                <div class="table-responsive">
+
+                    <table class="table table-hover">
+
+                        <thead>
+
+                        <tr>
+
+                            <th>
+                                <input
+                                    type="checkbox"
+                                    id="selectAll"
+                                >
+                            </th>
+
+                            <th>
+                                ID
+                            </th>
+
+                            <th>
+                                Name
+                            </th>
+
+                            <th>
+                                Email
+                            </th>
+
+                            <th>
+                                Status
+                            </th>
+
+                            <th>
+                                Valid Until
+                            </th>
+
+                            <th>
+                                Actions
+                            </th>
+
+                        </tr>
+
+                        </thead>
+
+
+                        <tbody>
+
+                        @forelse($users as $user)
+
+                            <tr>
+
+                                <td>
+
+                                    @if($user->welcome_valid_until)
+
+                                        <input
+                                            type="checkbox"
+                                            name="user_ids[]"
+                                            value="{{ $user->id }}"
+                                            class="user-checkbox"
+                                        >
+
+                                    @endif
+
+                                </td>
+
+
+                                <td>
+                                    {{ $user->id }}
+                                </td>
+
+
+                                <td>
+
+                                    <strong>
+                                        {{ $user->name }}
+                                    </strong>
+
+                                </td>
+
+
+                                <td>
+                                    {{ $user->email }}
+                                </td>
+
+
+                                <td>
+
+                                    @if($user->activationStatus() === 'activated')
+
+                                        <span class="badge bg-success">
+                                            Activated
+                                        </span>
+
+                                    @elseif($user->activationStatus() === 'pending')
+
+                                        <span class="badge bg-warning text-dark">
+                                            Pending
+                                        </span>
+
+                                    @else
+
+                                        <span class="badge bg-danger">
+                                            Expired
+                                        </span>
+
+                                    @endif
+
+                                </td>
+
+
+                                <td>
+
+                                    @if($user->welcome_valid_until)
+
+                                        {{ $user->welcome_valid_until->format('d M Y, h:i A') }}
+
+                                    @else
+
+                                        —
+
+                                    @endif
+
+                                </td>
+
+
+                                <td class="action-buttons">
+
+                                    @if($user->welcome_valid_until)
+
+                                        @if($user->welcome_valid_until->isFuture())
+
+                                            <form
+                                                method="POST"
+                                                action="{{ route('welcome.resend', $user) }}"
+                                            >
+
+                                                @csrf
+
+                                                <input
+                                                    type="hidden"
+                                                    name="hours"
+                                                    value="24"
+                                                >
+
+                                                <button
+                                                    type="submit"
+                                                    class="btn btn-sm btn-outline-primary"
+                                                >
+                                                    Resend
+                                                </button>
+
+                                            </form>
+
+
+                                            <form
+                                                method="POST"
+                                                action="{{ route('welcome.revoke', $user) }}"
+                                            >
+
+                                                @csrf
+
+                                                <button
+                                                    type="submit"
+                                                    class="btn btn-sm btn-outline-danger"
+                                                    onclick="return confirm('Revoke this invitation?')"
+                                                >
+                                                    Revoke
+                                                </button>
+
+                                            </form>
+
+                                        @else
+
+                                            <form
+                                                method="POST"
+                                                action="{{ route('welcome.reactivate', $user) }}"
+                                            >
+
+                                                @csrf
+
+                                                <input
+                                                    type="hidden"
+                                                    name="hours"
+                                                    value="24"
+                                                >
+
+                                                <button
+                                                    type="submit"
+                                                    class="btn btn-sm btn-outline-success"
+                                                >
+                                                    Reactivate
+                                                </button>
+
+                                            </form>
+
+                                        @endif
+
+                                    @else
+
+                                        <span class="text-success">
+                                            Account Active
+                                        </span>
+
+                                    @endif
+
+
+                                    <form
+                                        method="POST"
+                                        action="{{ route('welcome.destroy', $user) }}"
+                                    >
+
+                                        @csrf
+
+                                        @method('DELETE')
+
+                                        <button
+                                            type="submit"
+                                            class="btn btn-sm btn-outline-dark"
+                                            onclick="return confirm('Delete {{ $user->email }}?')"
+                                        >
+                                            Delete
+                                        </button>
+
+                                    </form>
+
+                                </td>
+
+                            </tr>
+
+                        @empty
+
+                            <tr>
+
+                                <td
+                                    colspan="7"
+                                    class="text-center text-muted py-5"
+                                >
+                                    No users found.
+                                </td>
+
+                            </tr>
+
+                        @endforelse
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+
+                <div class="mt-4">
+
+                    {{ $users->links('pagination::bootstrap-5') }}
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </form>
 
 </div>
+
+
+<script>
+
+document.getElementById('selectAll')
+    .addEventListener('change', function () {
+
+        document
+            .querySelectorAll('.user-checkbox')
+            .forEach(function (checkbox) {
+
+                checkbox.checked = this.checked;
+
+            }, this);
+
+    });
+
+document
+    .getElementById('bulkForm')
+    .addEventListener('submit', function (event) {
+
+        const selected = document
+            .querySelectorAll('.user-checkbox:checked');
+
+        if (selected.length === 0) {
+
+            event.preventDefault();
+
+            alert('Please select at least one pending or expired user.');
+
+        }
+
+    });
+
+</script>
 
 </body>
 

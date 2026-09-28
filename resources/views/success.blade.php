@@ -36,7 +36,7 @@
         }
 
         .success-card {
-            width: 400px;
+            width: 450px;
             max-width: 90%;
 
             background: white;
@@ -72,12 +72,31 @@
     </h2>
 
     <p class="text-muted">
-        Welcome email sent successfully.
+        Welcome invitation sent successfully.
     </p>
 
-    <p class="text-muted">
-        Please check the user's inbox.
-    </p>
+
+    @if(isset($user))
+
+        <div class="alert alert-light border text-start">
+
+            <strong>
+                Name:
+            </strong>
+
+            {{ $user->name }}
+
+            <br>
+
+            <strong>
+                Email:
+            </strong>
+
+            {{ $user->email }}
+
+        </div>
+
+    @endif
 
 
     <div class="d-grid gap-2 mt-4">
