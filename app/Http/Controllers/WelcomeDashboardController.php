@@ -4,10 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\WelcomeInvitationLog;
+use App\Services\UserAgentParser;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
-use Illuminate\Support\Facades\DB;
+
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -75,12 +75,12 @@ class WelcomeDashboardController extends Controller
             ->where('action', 'activated')
             ->count();
 
-        $recentUsers = User::oldest()
+        $recentUsers = User::latest()
             ->take(5)
             ->get();
 
         $recentActivities = WelcomeInvitationLog::with('user')
-            ->oldest()
+            ->latest()
             ->take(5)
             ->get();
 
@@ -107,8 +107,8 @@ class WelcomeDashboardController extends Controller
     {
         $search = $request->input('search');
         $status = $request->input('status', 'all');
-        $sort = $request->input('sort', 'oldest');
-        $direction = $request->input('direction', 'asc');
+        $sort = $request->input('sort', 'latest');
+        $direction = $request->input('direction', 'desc');
 
         $allowedSorts = [
             'id',
@@ -122,7 +122,7 @@ class WelcomeDashboardController extends Controller
         }
 
         if (!in_array($direction, ['asc', 'desc'])) {
-            $direction = 'asc';
+            $direction = 'desc';
         }
 
         $users = User::query()
@@ -166,7 +166,7 @@ class WelcomeDashboardController extends Controller
                 $query->orderBy($sort, $direction);
             })
 
-            ->paginate(5)
+            ->paginate(10)
             ->withQueryString();
 
         return view('users', compact(
@@ -179,7 +179,7 @@ class WelcomeDashboardController extends Controller
     }
 
     /**
-     * Resend invitation with custom validity.
+     * Resend invitation with custom validity TTL.
      */
     public function resend(
         Request $request,
@@ -187,13 +187,7 @@ class WelcomeDashboardController extends Controller
     ): RedirectResponse {
         $hours = (int) $request->input('hours', 24);
 
-        $allowedHours = [
-            6,
-            12,
-            24,
-            48,
-            72,
-        ];
+        $allowedHours = [1, 6, 12, 24, 48, 72, 168];
 
         if (!in_array($hours, $allowedHours)) {
             $hours = 24;
@@ -214,24 +208,24 @@ class WelcomeDashboardController extends Controller
             $user,
             'resent',
             $expiresAt,
-            "Welcome invitation resent for {$hours} hours."
+            "Welcome invitation resent with custom TTL of {$hours} hours."
         );
 
         return back()->with(
             'success',
-            "Welcome invitation resent successfully. The new activation link is valid for {$hours} hours."
+            "Welcome invitation resent successfully. Activation link valid for {$hours} hours."
         );
     }
 
     /**
-     * Bulk resend.
+     * Bulk resend with custom TTL.
      */
     public function bulkResend(Request $request): RedirectResponse
     {
         $request->validate([
             'user_ids' => ['required', 'array'],
             'user_ids.*' => ['integer', 'exists:users,id'],
-            'hours' => ['required', 'integer', 'in:6,12,24,48,72'],
+            'hours' => ['required', 'integer', 'in:1,6,12,24,48,72,168'],
         ]);
 
         $hours = (int) $request->input('hours');
@@ -254,7 +248,7 @@ class WelcomeDashboardController extends Controller
                 $user,
                 'resent',
                 $expiresAt,
-                "Bulk invitation resend for {$hours} hours."
+                "Bulk invitation resend with custom TTL of {$hours} hours."
             );
 
             $count++;
@@ -262,7 +256,7 @@ class WelcomeDashboardController extends Controller
 
         return back()->with(
             'success',
-            "{$count} invitation(s) resent successfully."
+            "{$count} invitation(s) resent successfully with {$hours} hours validity."
         );
     }
 
@@ -295,7 +289,7 @@ class WelcomeDashboardController extends Controller
     }
 
     /**
-     * Reactivate invitation.
+     * Reactivate invitation with custom TTL.
      */
     public function reactivate(
         Request $request,
@@ -310,7 +304,7 @@ class WelcomeDashboardController extends Controller
 
         $hours = (int) $request->input('hours', 24);
 
-        if (!in_array($hours, [6, 12, 24, 48, 72])) {
+        if (!in_array($hours, [1, 6, 12, 24, 48, 72, 168])) {
             $hours = 24;
         }
 
@@ -328,6 +322,126 @@ class WelcomeDashboardController extends Controller
         return back()->with(
             'success',
             "Invitation reactivated for {$hours} hours."
+        );
+    }
+
+    /**
+     * Trigger automated reminders for links expiring soon.
+     */
+    public function sendExpiringReminders(Request $request): RedirectResponse
+    {
+        $hours = (int) $request->input('hours', 6);
+        $threshold = now()->addHours($hours);
+
+        $expiringUsers = User::whereNotNull('welcome_valid_until')
+            ->where('welcome_valid_until', '>', now())
+            ->where('welcome_valid_until', '<=', $threshold)
+            ->get();
+
+        $count = 0;
+
+        foreach ($expiringUsers as $user) {
+            $user->sendWelcomeNotification($user->welcome_valid_until);
+
+            $this->logActivity(
+                $user,
+                'reminder_sent',
+                $user->welcome_valid_until,
+                "Automated reminder sent for link expiring within {$hours} hours."
+            );
+
+            $count++;
+        }
+
+        return back()->with(
+            'success',
+            "{$count} automated reminder email(s) sent for links expiring within {$hours} hours."
+        );
+    }
+
+    /**
+     * Onboarding Funnel Analytics & Audit Trail.
+     */
+    public function funnel(Request $request): View
+    {
+        $totalUsers = User::count();
+        $activatedUsers = User::whereNull('welcome_valid_until')->count();
+        $pendingUsers = User::whereNotNull('welcome_valid_until')->where('welcome_valid_until', '>', now())->count();
+        $expiredUsers = User::whereNotNull('welcome_valid_until')->where('welcome_valid_until', '<=', now())->count();
+
+        $openedCount = WelcomeInvitationLog::where('action', 'opened')->distinct('user_id')->count('user_id');
+
+        $conversionRate = $totalUsers > 0 ? round(($activatedUsers / $totalUsers) * 100, 1) : 0;
+        $dropoffRate = $totalUsers > 0 ? round(($expiredUsers / $totalUsers) * 100, 1) : 0;
+        $openRate = $totalUsers > 0 ? round(($openedCount / $totalUsers) * 100, 1) : 0;
+
+        // Device breakdown
+        $deviceStats = WelcomeInvitationLog::selectRaw('device_type, COUNT(*) as count')
+            ->whereNotNull('device_type')
+            ->groupBy('device_type')
+            ->orderByDesc('count')
+            ->get();
+
+        // Browser breakdown
+        $browserStats = WelcomeInvitationLog::selectRaw('browser, COUNT(*) as count')
+            ->whereNotNull('browser')
+            ->groupBy('browser')
+            ->orderByDesc('count')
+            ->get();
+
+        // Security Audit Trail
+        $auditTrail = WelcomeInvitationLog::with('user')
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
+
+        return view('funnel', compact(
+            'totalUsers',
+            'activatedUsers',
+            'pendingUsers',
+            'expiredUsers',
+            'openedCount',
+            'conversionRate',
+            'dropoffRate',
+            'openRate',
+            'deviceStats',
+            'browserStats',
+            'auditTrail'
+        ));
+    }
+
+    /**
+     * Create user with customizable invitation link validity.
+     */
+    public function createUser(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'unique:users,email'],
+            'hours' => ['required', 'integer', 'in:1,6,12,24,48,72,168'],
+        ]);
+
+        $hours = (int) $validated['hours'];
+        $expiresAt = now()->addHours($hours);
+
+        $user = User::create([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'password' => bcrypt(\Illuminate\Support\Str::random(16)),
+        ]);
+
+        $user->sendWelcomeNotification($expiresAt);
+
+        $this->logActivity(
+            $user,
+            'sent',
+            $expiresAt,
+            "Welcome invitation sent with custom TTL of {$hours} hours."
+        );
+
+        return back()->with(
+            'success',
+            "User {$user->email} created & welcome invitation sent with {$hours} hours link validity."
         );
     }
 
@@ -427,7 +541,7 @@ class WelcomeDashboardController extends Controller
     }
 
     /**
-     * Invitation activity history.
+     * Invitation activity history with device & IP audit trail.
      */
     public function activity(Request $request): View
     {
@@ -438,8 +552,8 @@ class WelcomeDashboardController extends Controller
                 $action !== 'all',
                 fn ($query) => $query->where('action', $action)
             )
-            ->oldest()
-            ->paginate(5)
+            ->latest()
+            ->paginate(10)
             ->withQueryString();
 
         return view(
@@ -452,7 +566,7 @@ class WelcomeDashboardController extends Controller
     }
 
     /**
-     * Record activity.
+     * Record activity with IP, user-agent, device, and browser.
      */
     private function logActivity(
         User $user,
@@ -460,10 +574,16 @@ class WelcomeDashboardController extends Controller
         $validUntil = null,
         ?string $details = null
     ): void {
+        $ua = request()->userAgent();
+        $parsed = UserAgentParser::parse($ua);
+
         WelcomeInvitationLog::create([
             'user_id' => $user->id,
             'action' => $action,
             'ip_address' => request()->ip(),
+            'user_agent' => $ua,
+            'device_type' => $parsed['device_type'],
+            'browser' => $parsed['browser'],
             'valid_until' => $validUntil,
             'details' => $details,
         ]);
