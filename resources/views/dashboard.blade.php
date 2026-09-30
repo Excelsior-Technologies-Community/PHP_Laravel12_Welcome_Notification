@@ -95,7 +95,14 @@
             </div>
 
 
-            <div class="d-flex gap-2">
+            <div class="d-flex gap-2 flex-wrap">
+
+                <a
+                    href="{{ route('welcome.funnel') }}"
+                    class="btn btn-warning fw-bold"
+                >
+                    📊 Funnel Analytics
+                </a>
 
                 <a
                     href="{{ route('welcome.users') }}"
@@ -108,8 +115,16 @@
                     href="{{ route('welcome.activity') }}"
                     class="btn btn-light"
                 >
-                    Activity
+                    Activity Logs
                 </a>
+
+                <form action="{{ route('welcome.send-reminders') }}" method="POST" class="d-inline">
+                    @csrf
+                    <input type="hidden" name="hours" value="6">
+                    <button type="submit" class="btn btn-outline-light" onclick="return confirm('Send automated reminders for invitations expiring within 6 hours?')">
+                        ⏰ Send Reminders
+                    </button>
+                </form>
 
             </div>
 

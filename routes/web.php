@@ -12,10 +12,25 @@ use App\Http\Controllers\Auth\MyWelcomeController;
 |--------------------------------------------------------------------------
 */
 
+Route::get('/', function () {
+    return redirect()->route('welcome.dashboard');
+});
+
 Route::get('/welcome-dashboard', [
     WelcomeDashboardController::class,
     'dashboard',
 ])->name('welcome.dashboard');
+
+/*
+|--------------------------------------------------------------------------
+| Onboarding Funnel Analytics & Audit Trail
+|--------------------------------------------------------------------------
+*/
+
+Route::get('/welcome-funnel', [
+    WelcomeDashboardController::class,
+    'funnel',
+])->name('welcome.funnel');
 
 
 /*
@@ -29,10 +44,15 @@ Route::get('/welcome-users', [
     'users',
 ])->name('welcome.users');
 
+Route::post('/welcome-users/create', [
+    WelcomeDashboardController::class,
+    'createUser',
+])->name('welcome.create-user');
+
 
 /*
 |--------------------------------------------------------------------------
-| Resend Invitation
+| Resend & Reminders
 |--------------------------------------------------------------------------
 */
 
@@ -41,22 +61,20 @@ Route::post('/welcome-users/{user}/resend', [
     'resend',
 ])->name('welcome.resend');
 
-
-/*
-|--------------------------------------------------------------------------
-| Bulk Resend
-|--------------------------------------------------------------------------
-*/
-
 Route::post('/welcome-users/bulk-resend', [
     WelcomeDashboardController::class,
     'bulkResend',
 ])->name('welcome.bulk-resend');
 
+Route::post('/welcome-users/send-reminders', [
+    WelcomeDashboardController::class,
+    'sendExpiringReminders',
+])->name('welcome.send-reminders');
+
 
 /*
 |--------------------------------------------------------------------------
-| Revoke Invitation
+| Revoke & Reactivate
 |--------------------------------------------------------------------------
 */
 
@@ -64,13 +82,6 @@ Route::post('/welcome-users/{user}/revoke', [
     WelcomeDashboardController::class,
     'revoke',
 ])->name('welcome.revoke');
-
-
-/*
-|--------------------------------------------------------------------------
-| Reactivate Invitation
-|--------------------------------------------------------------------------
-*/
 
 Route::post('/welcome-users/{user}/reactivate', [
     WelcomeDashboardController::class,
@@ -80,7 +91,7 @@ Route::post('/welcome-users/{user}/reactivate', [
 
 /*
 |--------------------------------------------------------------------------
-| Delete User
+| Delete User & Export
 |--------------------------------------------------------------------------
 */
 
@@ -88,13 +99,6 @@ Route::delete('/welcome-users/{user}', [
     WelcomeDashboardController::class,
     'destroy',
 ])->name('welcome.destroy');
-
-
-/*
-|--------------------------------------------------------------------------
-| CSV Export
-|--------------------------------------------------------------------------
-*/
 
 Route::get('/welcome-users-export', [
     WelcomeDashboardController::class,
@@ -104,7 +108,7 @@ Route::get('/welcome-users-export', [
 
 /*
 |--------------------------------------------------------------------------
-| Invitation Activity
+| Security & Device Audit Activity
 |--------------------------------------------------------------------------
 */
 
@@ -134,10 +138,16 @@ Route::get('/create-user', function () {
 
     $user->sendWelcomeNotification($expiresAt);
 
+    $ua = request()->userAgent();
+    $parsed = \App\Services\UserAgentParser::parse($ua);
+
     \App\Models\WelcomeInvitationLog::create([
         'user_id' => $user->id,
         'action' => 'sent',
         'ip_address' => request()->ip(),
+        'user_agent' => $ua,
+        'device_type' => $parsed['device_type'],
+        'browser' => $parsed['browser'],
         'valid_until' => $expiresAt,
         'details' => 'Welcome invitation sent when user was created.',
     ]);
